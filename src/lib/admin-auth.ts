@@ -21,11 +21,11 @@ function expectedPassword() {
 
 // Clave de firma determinística: igual en todas las instancias serverless.
 function secret() {
-  return process.env.ADMIN_SESSION_SECRET || process.env.ADMIN_PASSWORD || "soguau-fallback-signing-key";
+  return cleanSecret(process.env.ADMIN_SESSION_SECRET) || cleanSecret(process.env.ADMIN_PASSWORD) || "soguau-fallback-signing-key";
 }
 
 function sign(payload: string) {
-  return createHmac("sha256", secret()).update(payload).digest("hex");
+  return createHmac("sha256", secret()).update(payload).digest("base64url");
 }
 
 function safeEqual(a: string, b: string) {
@@ -40,20 +40,29 @@ export function checkPassword(input: string) {
   return timingSafeEqual(h(cleanSecret(input)), h(expectedPassword()));
 }
 
+/** Token = base64url("admin.<expMs>") + "." + base64url(HMAC). Expiración en milisegundos. */
 export function createSessionToken() {
-  const exp = Math.floor(Date.now() / 1000) + SESSION_SECONDS;
-  const payload = `admin.${exp}`;
+  const exp = Date.now() + SESSION_SECONDS * 1000;
+  const payload = Buffer.from(`admin.${exp}`).toString("base64url");
   return `${payload}.${sign(payload)}`;
 }
 
+export type AuthReason = "sin_cookie" | "firma_invalida" | "token_expirado";
+
+export function inspectSessionToken(token: string | undefined | null): { ok: true } | { ok: false; reason: AuthReason } {
+  if (!token) return { ok: false, reason: "sin_cookie" };
+  const parts = token.split(".");
+  if (parts.length !== 2) return { ok: false, reason: "firma_invalida" };
+  const [payload, sig] = parts;
+  if (!safeEqual(sig, sign(payload))) return { ok: false, reason: "firma_invalida" };
+  const [role, exp] = Buffer.from(payload, "base64url").toString("utf8").split(".");
+  if (role !== "admin" || !Number(exp)) return { ok: false, reason: "firma_invalida" };
+  if (Number(exp) < Date.now()) return { ok: false, reason: "token_expirado" };
+  return { ok: true };
+}
+
 export function verifySessionToken(token: string | undefined | null) {
-  if (!token) return false;
-  const i = token.lastIndexOf(".");
-  if (i < 0) return false;
-  const payload = token.slice(0, i);
-  const [role, exp] = payload.split(".");
-  if (role !== "admin" || !Number(exp) || Number(exp) < Date.now() / 1000) return false;
-  return safeEqual(token.slice(i + 1), sign(payload));
+  return inspectSessionToken(token).ok;
 }
 
 export function sessionCookieOptions() {
@@ -75,12 +84,20 @@ function readCookie(req: Request, name: string) {
   return null;
 }
 
+export function inspectAdminRequest(req: Request) {
+  return inspectSessionToken(readCookie(req, ADMIN_COOKIE));
+}
+
 export function isAdminRequest(req: Request) {
-  return verifySessionToken(readCookie(req, ADMIN_COOKIE));
+  return inspectAdminRequest(req).ok;
 }
 
 /** Uso: `const denied = requireAdmin(req); if (denied) return denied;` */
 export function requireAdmin(req: Request): NextResponse | null {
-  if (isAdminRequest(req)) return null;
-  return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+  const r = inspectAdminRequest(req);
+  if (r.ok) return null;
+  return NextResponse.json(
+    { error: "No autorizado", reason: r.reason },
+    { status: 401, headers: { "Cache-Control": "no-store, max-age=0" } },
+  );
 }

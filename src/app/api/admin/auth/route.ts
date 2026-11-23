@@ -9,7 +9,8 @@ export async function GET(req: Request) {
     {
       authenticated: isAdminRequest(req),
       demoPassword: isDemoPassword(),
-      envPasswordConfigured: Boolean(process.env.ADMIN_PASSWORD?.trim()),
+      envPasswordConfigured: !isDemoPassword(),
+      envPasswordLength: cleanSecret(process.env.ADMIN_PASSWORD).length,
       supabaseConnected: hasServiceRole(),
     },
     { headers: NO_STORE },
@@ -26,7 +27,10 @@ export async function POST(req: Request) {
   }
   if (!password || !checkPassword(password)) {
     await new Promise((r) => setTimeout(r, 600));
-    return NextResponse.json({ error: "Contraseña incorrecta" }, { status: 401, headers: NO_STORE });
+    return NextResponse.json(
+      { error: "Contraseña incorrecta", reason: isDemoPassword() && !checkPassword(password) ? "modo_demo_sin_env" : "clave_incorrecta" },
+      { status: 401, headers: NO_STORE },
+    );
   }
   const res = NextResponse.json({ ok: true }, { headers: NO_STORE });
   res.cookies.set(ADMIN_COOKIE, createSessionToken(), sessionCookieOptions());

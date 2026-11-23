@@ -5,9 +5,9 @@ import { Loader2, Upload } from "lucide-react";
 
 export type Row = Record<string, unknown> & { id?: string };
 
-export async function api<T = Record<string, unknown>>(url: string, init?: RequestInit): Promise<{ ok: boolean; status: number; data: T & { error?: string } }> {
+export async function api<T = Record<string, unknown>>(url: string, init?: RequestInit): Promise<{ ok: boolean; status: number; data: T & { error?: string; reason?: string } }> {
   try {
-    const res = await fetch(url, { ...init, cache: "no-store" });
+    const res = await fetch(url, { ...init, credentials: "include", cache: "no-store" });
     const data = await res.json().catch(() => ({}));
     return { ok: res.ok, status: res.status, data };
   } catch {

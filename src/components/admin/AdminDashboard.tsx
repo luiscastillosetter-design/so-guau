@@ -52,7 +52,7 @@ const bytype = (t: "image" | "video") => ({ value: t, label: t === "image" ? "Im
 
 export default function AdminDashboard() {
   const [status, setStatus] = useState<"checking" | "login" | "ready">("checking");
-  const [demoPw, setDemoPw] = useState(false);
+  const [diag, setDiag] = useState<{ demo: boolean; len: number } | null>(null);
   const [data, setData] = useState<AdminData | null>(null);
   const [tab, setTab] = useState<TabId>("orders");
   const [toast, setToast] = useState<{ msg: string; err: boolean } | null>(null);
@@ -69,18 +69,19 @@ export default function AdminDashboard() {
     setStatus("ready");
   }
 
-  async function reload() {
+  async function reload(): Promise<string | null> {
     const r = await api<AdminData>("/api/admin/data");
-    if (r.status === 401) return setStatus("login");
-    if (!r.ok) return notify(r.data.error ?? "No se pudieron cargar los datos", true);
+    if (r.status === 401) { setStatus("login"); return `${r.data.error ?? "No autorizado"} (${r.data.reason ?? "401"})`; }
+    if (!r.ok) { notify(r.data.error ?? "No se pudieron cargar los datos", true); return r.data.error ?? `Error HTTP ${r.status}`; }
     applyData(r.data);
+    return null;
   }
 
   useEffect(() => {
     let alive = true;
-    api<{ authenticated: boolean; demoPassword: boolean; envPasswordConfigured?: boolean }>("/api/admin/auth").then(async (a) => {
+    api<{ authenticated: boolean; envPasswordConfigured?: boolean; envPasswordLength?: number }>("/api/admin/auth").then(async (a) => {
       if (!alive) return;
-      setDemoPw(a.data.envPasswordConfigured === undefined ? Boolean(a.data.demoPassword) : !a.data.envPasswordConfigured);
+      setDiag({ demo: !a.data.envPasswordConfigured, len: a.data.envPasswordLength ?? 0 });
       if (!a.data.authenticated) return setStatus("login");
       const r = await api<AdminData>("/api/admin/data");
       if (!alive) return;
@@ -127,7 +128,7 @@ export default function AdminDashboard() {
   }
 
   if (status === "login" || !data) {
-    return wrap(<Login demoPw={demoPw} onDone={reload} />);
+    return wrap(<Login diag={diag} onDone={reload} />);
   }
 
   const d = data;
@@ -303,7 +304,7 @@ export default function AdminDashboard() {
   );
 }
 
-function Login({ demoPw, onDone }: { demoPw: boolean; onDone: () => Promise<void> }) {
+function Login({ diag, onDone }: { diag: { demo: boolean; len: number } | null; onDone: () => Promise<string | null> }) {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -314,8 +315,12 @@ function Login({ demoPw, onDone }: { demoPw: boolean; onDone: () => Promise<void
     setBusy(true);
     setError("");
     const r = await postJson("/api/admin/auth", { password });
-    if (r.ok) await onDone();
-    else setError(r.data.error ?? `No se pudo iniciar sesión (HTTP ${r.status})`);
+    if (r.ok) {
+      const fail = await onDone();
+      if (fail) setError(`Sesión creada pero no se cargaron los datos: ${fail}`);
+    } else {
+      setError(`${r.data.error ?? `No se pudo iniciar sesión (HTTP ${r.status})`}${r.data.reason ? ` [${r.data.reason}]` : ""}`);
+    }
     setBusy(false);
   }
 
@@ -330,7 +335,7 @@ function Login({ demoPw, onDone }: { demoPw: boolean; onDone: () => Promise<void
         </Field>
         {error && <p role="alert" className="mt-3 text-sm text-red-700">{error}</p>}
         <Btn type="submit" busy={busy} className="mt-5 w-full">Entrar</Btn>
-        <p className="mt-4 text-center text-xs text-brand-text/45">{demoPw ? "Modo demo activo (sin ADMIN_PASSWORD en entorno)" : "Clave configurada en servidor"}</p>
+        <p className="mt-4 text-center text-xs text-brand-text/45">{diag === null ? "Servidor: comprobando…" : diag.demo ? "Servidor: sin ADMIN_PASSWORD, modo demo" : `Servidor: clave activa (${diag.len} caracteres)`}</p>
       </form>
     </div>
   );
