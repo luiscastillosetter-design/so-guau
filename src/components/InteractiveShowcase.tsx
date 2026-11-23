@@ -13,24 +13,55 @@ const pad = (n: number) => String(n).padStart(2, "0");
 const usd = (n: number) => `$${n.toFixed(2)}`;
 const widthByKind: Record<Product["kind"], string> = { tee: "100%", hoodie: "100%", mug: "78%", cooler: "74%", cap: "88%" };
 
+const hasPhoto = (p: Product) => Boolean(p.images.profile || p.images.front || p.images.back);
+
 function Garment3D({ product, color, turn, flipped }: { product: Product; color: string; turn: number; flipped: boolean }) {
+  const photo = hasPhoto(product);
+  const frontSrc = product.images.profile ?? product.images.front ?? product.images.back;
+  const backSrc = product.images.back ?? frontSrc;
+  const shadow = "drop-shadow-[0_18px_22px_rgba(20,38,22,0.16)]";
   return (
-    <div style={{ perspective: 900 }} className="mx-auto" >
-      <motion.div style={{ transformStyle: "preserve-3d" }} animate={{ rotateY: turn }} transition={spring}>
+    <div style={{ perspective: 900 }} className="mx-auto">
+      <motion.div style={{ transformStyle: "preserve-3d", transformOrigin: photo ? "50% 0%" : undefined }} animate={{ rotateY: turn }} transition={spring}>
         <motion.div
           className="relative mx-auto"
-          style={{ transformStyle: "preserve-3d", aspectRatio: aspectOf[product.kind], width: widthByKind[product.kind] }}
+          style={{ transformStyle: "preserve-3d", aspectRatio: photo ? "3 / 4" : aspectOf[product.kind], width: photo ? "100%" : widthByKind[product.kind] }}
           animate={{ rotateY: flipped ? 180 : 0 }}
           transition={spring}
         >
-          <div className="absolute inset-0" style={{ backfaceVisibility: "hidden" }}>
-            <ProductArt product={product} color={color} view="front" />
-          </div>
-          <div className="absolute inset-0" style={{ backfaceVisibility: "hidden", transform: "rotateY(180deg)" }}>
-            <ProductArt product={product} color={color} view="back" />
-          </div>
+          {photo ? (
+            <>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={frontSrc} alt={product.name} draggable={false} className={`absolute inset-0 h-full w-full object-contain ${shadow}`} style={{ backfaceVisibility: "hidden" }} />
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={backSrc} alt="" aria-hidden draggable={false} className={`absolute inset-0 h-full w-full object-contain ${shadow}`} style={{ backfaceVisibility: "hidden", transform: "rotateY(180deg)" }} />
+            </>
+          ) : (
+            <>
+              <div className="absolute inset-0" style={{ backfaceVisibility: "hidden" }}>
+                <ProductArt product={product} color={color} view="front" />
+              </div>
+              <div className="absolute inset-0" style={{ backfaceVisibility: "hidden", transform: "rotateY(180deg)" }}>
+                <ProductArt product={product} color={color} view="back" />
+              </div>
+            </>
+          )}
         </motion.div>
       </motion.div>
+    </div>
+  );
+}
+
+const brushed =
+  "repeating-linear-gradient(90deg, rgba(255,255,255,0.18) 0 1px, rgba(0,0,0,0.05) 1px 2px), linear-gradient(180deg, #f4f3ef 0%, #cfcdc6 28%, #8f8d87 62%, #b9b7b0 100%)";
+
+function RackBar({ slim = false }: { slim?: boolean }) {
+  return (
+    <div className="relative z-10 mx-auto px-3" aria-hidden>
+      <div className={`relative rounded-full ${slim ? "h-2" : "h-[11px]"}`} style={{ backgroundImage: brushed, boxShadow: "0 1px 0 rgba(255,255,255,0.7) inset, 0 14px 16px -10px rgba(20,38,22,0.35), 0 3px 4px -1px rgba(20,38,22,0.18)" }}>
+        <span className="absolute -left-2 top-1/2 h-5 w-2.5 -translate-y-1/2 rounded-[3px]" style={{ backgroundImage: "linear-gradient(90deg, #a9a7a0, #e4e2db 45%, #84827c)" }} />
+        <span className="absolute -right-2 top-1/2 h-5 w-2.5 -translate-y-1/2 rounded-[3px]" style={{ backgroundImage: "linear-gradient(90deg, #a9a7a0, #e4e2db 45%, #84827c)" }} />
+      </div>
     </div>
   );
 }
@@ -48,8 +79,11 @@ function Badge({ text }: { text?: string }) {
   if (!text) return null;
   const sale = text.startsWith("-");
   return (
-    <span className={`inline-block rounded-full px-2.5 py-1 font-ui text-[9px] font-bold uppercase tracking-[0.18em] ${sale ? "bg-brand-accent text-brand-text" : "border border-brand-primary/30 text-brand-primary"}`}>
-      {text}
+    <span className="flex flex-col items-center" aria-label={text}>
+      <span aria-hidden className="h-3 w-px bg-brand-primary/30" />
+      <span className={`rounded-[2px] px-2.5 py-1 font-ui text-[8.5px] font-semibold uppercase tracking-[0.28em] ${sale ? "bg-brand-accent/90 text-brand-text" : "border border-brand-primary/25 bg-brand-bg text-brand-primary/80"}`}>
+        {text}
+      </span>
     </span>
   );
 }
@@ -79,9 +113,10 @@ function DesktopItem({ product, mode, onOpen }: { product: Product; mode: "rack"
       className={`group flex min-w-0 flex-col text-left outline-none ${rack ? "" : "justify-end"}`}
       aria-label={`Abrir ${product.name}`}
     >
-      {rack && <Hanger />}
+      {rack && !hasPhoto(product) && <Hanger />}
+      {rack && hasPhoto(product) && <span aria-hidden className="mx-auto h-3 w-px bg-zinc-400" />}
       <div className="px-2">
-        <Garment3D product={product} color={product.colors[0].hex} turn={rack ? (hover ? 0 : -68) : hover ? -14 : 0} flipped={false} />
+        <Garment3D product={product} color={product.colors[0].hex} turn={rack ? (hover ? 0 : hasPhoto(product) ? -24 : -68) : hover ? -14 : 0} flipped={false} />
       </div>
       {!rack && (
         <motion.div aria-hidden className="mx-auto mt-1 h-2 w-3/5 rounded-[50%] bg-brand-text/25 blur-md" animate={{ scaleX: hover ? 0.7 : 1, opacity: hover ? 0.5 : 1 }} transition={spring} />
@@ -137,7 +172,8 @@ function MobileCarousel({ list, mode, onOpen }: { list: Product[]; mode: "rack" 
               transition={spring}
               className="w-[62vw] shrink-0 snap-center"
             >
-              {rack && <Hanger />}
+              {rack && !hasPhoto(p) && <Hanger />}
+              {rack && hasPhoto(p) && <span aria-hidden className="mx-auto block h-3 w-px bg-zinc-400" />}
               <Garment3D product={p} color={p.colors[0].hex} turn={isActive ? 0 : rel < 0 ? 62 : -62} flipped={isActive && flipped} />
               {!rack && <div className="-mx-4 mt-1 h-3 rounded-sm bg-gradient-to-b from-stone-100 to-stone-300 shadow-[0_12px_20px_-10px_rgba(20,38,22,0.35)]" />}
             </motion.div>
@@ -322,10 +358,7 @@ export default function InteractiveShowcase({ catalog }: { catalog: Catalog }) {
                 {/* PC */}
                 <div className="hidden md:block">
                   {mode === "rack" && (
-                    <div className="relative mx-auto h-4 rounded-full bg-gradient-to-b from-zinc-100 via-zinc-400 to-zinc-500 shadow-[0_10px_18px_-8px_rgba(0,0,0,0.35)]">
-                      <span className="absolute -top-2 left-0 h-8 w-3 rounded-full bg-zinc-500" />
-                      <span className="absolute -top-2 right-0 h-8 w-3 rounded-full bg-zinc-500" />
-                    </div>
+                    <RackBar />
                   )}
                   <div className="-mt-2 overflow-x-auto scrollbar-hide">
                     <div className="grid gap-4 pb-2 pt-1" style={{ gridTemplateColumns: `repeat(${list.length}, minmax(11.5rem, 1fr))` }}>
@@ -343,7 +376,7 @@ export default function InteractiveShowcase({ catalog }: { catalog: Catalog }) {
                 </div>
                 {/* Móvil */}
                 <div className="md:hidden">
-                  {mode === "rack" && <div className="mb-1 h-2.5 rounded-full bg-gradient-to-b from-zinc-100 via-zinc-400 to-zinc-500" />}
+                  {mode === "rack" && <RackBar slim />}
                   <MobileCarousel key={filterKey} list={list} mode={mode} onOpen={setOpen} />
                 </div>
               </>

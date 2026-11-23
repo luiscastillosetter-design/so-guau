@@ -10,6 +10,7 @@ export interface StoreSettings {
   transferencia: { banco: string; cuenta: string; titular: string; rif: string };
   themeKey: string;
   brandName: string;
+  logoUrl: string | null;
   promptBot: string;
   source: "supabase" | "demo";
 }
@@ -27,6 +28,7 @@ export const DEMO_SETTINGS: StoreSettings = {
   },
   themeKey: "so-guau",
   brandName: "So Guau",
+  logoUrl: null,
   promptBot: "",
   source: "demo",
 };
@@ -65,6 +67,7 @@ export async function getStoreSettings(): Promise<StoreSettings> {
       },
       themeKey: s(data.theme_key, d.themeKey),
       brandName: s(data.brand_name ?? data.nombre_marca ?? data.name, d.brandName),
+      logoUrl: s(data.logo_url, "") || null,
       promptBot: s(data.prompt_bot, ""),
       source: "supabase",
     };
