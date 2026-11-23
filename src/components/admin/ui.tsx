@@ -7,7 +7,7 @@ export type Row = Record<string, unknown> & { id?: string };
 
 export async function api<T = Record<string, unknown>>(url: string, init?: RequestInit): Promise<{ ok: boolean; status: number; data: T & { error?: string } }> {
   try {
-    const res = await fetch(url, init);
+    const res = await fetch(url, { ...init, cache: "no-store" });
     const data = await res.json().catch(() => ({}));
     return { ok: res.ok, status: res.status, data };
   } catch {

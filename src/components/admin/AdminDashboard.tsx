@@ -78,9 +78,9 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     let alive = true;
-    api<{ authenticated: boolean; demoPassword: boolean }>("/api/admin/auth").then(async (a) => {
+    api<{ authenticated: boolean; demoPassword: boolean; envPasswordConfigured?: boolean }>("/api/admin/auth").then(async (a) => {
       if (!alive) return;
-      setDemoPw(Boolean(a.data.demoPassword));
+      setDemoPw(a.data.envPasswordConfigured === undefined ? Boolean(a.data.demoPassword) : !a.data.envPasswordConfigured);
       if (!a.data.authenticated) return setStatus("login");
       const r = await api<AdminData>("/api/admin/data");
       if (!alive) return;
@@ -315,7 +315,7 @@ function Login({ demoPw, onDone }: { demoPw: boolean; onDone: () => Promise<void
     setError("");
     const r = await postJson("/api/admin/auth", { password });
     if (r.ok) await onDone();
-    else setError(r.data.error ?? "No se pudo iniciar sesión");
+    else setError(r.data.error ?? `No se pudo iniciar sesión (HTTP ${r.status})`);
     setBusy(false);
   }
 
@@ -330,7 +330,7 @@ function Login({ demoPw, onDone }: { demoPw: boolean; onDone: () => Promise<void
         </Field>
         {error && <p role="alert" className="mt-3 text-sm text-red-700">{error}</p>}
         <Btn type="submit" busy={busy} className="mt-5 w-full">Entrar</Btn>
-        {demoPw && <p className="mt-4 text-center text-xs text-brand-text/45">Modo demo: ADMIN_PASSWORD no está definida en el entorno.</p>}
+        <p className="mt-4 text-center text-xs text-brand-text/45">{demoPw ? "Modo demo activo (sin ADMIN_PASSWORD en entorno)" : "Clave configurada en servidor"}</p>
       </form>
     </div>
   );

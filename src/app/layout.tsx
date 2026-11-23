@@ -10,19 +10,27 @@ import { getTheme } from "@/lib/themes";
 const playfair = Playfair_Display({ variable: "--font-playfair", subsets: ["latin"], display: "swap" });
 const montserrat = Montserrat({ variable: "--font-montserrat", subsets: ["latin"], display: "swap" });
 
-export const metadata: Metadata = {
-  metadataBase: new URL("https://soguau.com"),
-  title: "So Guau — Moda que deja huellas",
-  description: "Moda para ti y tu mascota. Prendas y objetos personalizados con diseños que dejan huellas.",
-  openGraph: {
-    title: "So Guau — Moda que deja huellas",
-    description: "Moda para ti y tu mascota, con diseños personalizados.",
-    url: "https://soguau.com",
-    siteName: "So Guau",
-    locale: "es_VE",
-    type: "website",
-  },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const settings = await getStoreSettings();
+  const brand = settings.brandName || "So Guau";
+  const slogan = settings.eslogan || "Moda que deja huellas";
+  const title = `${brand} — ${slogan}`;
+  const icon = settings.logoUrl || "/icon.svg";
+  return {
+    metadataBase: new URL("https://soguau.com"),
+    title,
+    description: settings.footerDescripcion || "Moda para ti y tu mascota. Prendas y objetos personalizados con diseños que dejan huellas.",
+    icons: { icon, apple: icon },
+    openGraph: {
+      title,
+      description: "Moda para ti y tu mascota, con diseños personalizados.",
+      url: "https://soguau.com",
+      siteName: brand,
+      locale: "es_VE",
+      type: "website",
+    },
+  };
+}
 
 export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   const settings = await getStoreSettings();

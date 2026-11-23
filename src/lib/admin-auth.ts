@@ -1,21 +1,27 @@
-import { createHmac, timingSafeEqual } from "node:crypto";
+import { createHash, createHmac, timingSafeEqual } from "node:crypto";
 import { NextResponse } from "next/server";
 
 // Solo servidor. Sesión admin = cookie HttpOnly firmada con HMAC-SHA256.
 export const ADMIN_COOKIE = "sg_admin";
-const SESSION_SECONDS = 60 * 60 * 12;
+const SESSION_SECONDS = 60 * 60 * 24 * 7;
 const DEMO_PASSWORD = "soguau2026";
 
+/** Quita espacios y comillas envolventes accidentales (típico al pegar en Vercel). */
+export function cleanSecret(v: string | undefined | null) {
+  return (v ?? "").trim().replace(/^["']|["']$/g, "").trim();
+}
+
 export function isDemoPassword() {
-  return !process.env.ADMIN_PASSWORD;
+  return !cleanSecret(process.env.ADMIN_PASSWORD);
 }
 
 function expectedPassword() {
-  return process.env.ADMIN_PASSWORD || DEMO_PASSWORD;
+  return cleanSecret(process.env.ADMIN_PASSWORD) || DEMO_PASSWORD;
 }
 
+// Clave de firma determinística: igual en todas las instancias serverless.
 function secret() {
-  return process.env.ADMIN_SESSION_SECRET || `sg-session:${expectedPassword()}`;
+  return process.env.ADMIN_SESSION_SECRET || process.env.ADMIN_PASSWORD || "soguau-fallback-signing-key";
 }
 
 function sign(payload: string) {
@@ -29,9 +35,9 @@ function safeEqual(a: string, b: string) {
 }
 
 export function checkPassword(input: string) {
-  // Se comparan hashes para igualar longitudes y evitar timing leaks.
-  const h = (v: string) => createHmac("sha256", "sg-pw").update(v).digest();
-  return timingSafeEqual(h(input), h(expectedPassword()));
+  // SHA-256 de ambas claves: siempre 32 bytes, timingSafeEqual nunca lanza por longitud.
+  const h = (v: string) => createHash("sha256").update(v).digest();
+  return timingSafeEqual(h(cleanSecret(input)), h(expectedPassword()));
 }
 
 export function createSessionToken() {
