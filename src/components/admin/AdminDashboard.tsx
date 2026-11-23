@@ -144,9 +144,9 @@ export default function AdminDashboard() {
     { key: "format_id", label: "Formato", type: "select", options: fmtOpts },
     { key: "badge", label: "Badge", type: "text", hint: "Ej: Nuevo, Más vendido" },
     { key: "colores_json", label: "Colores", type: "colors", hint: "Formato: Nombre=#hex, separados por coma" },
-    { key: "foto_perfil_url", label: "Foto perfil", type: "media", folder: "productos" },
-    { key: "foto_frente_url", label: "Foto frente", type: "media", folder: "productos" },
-    { key: "foto_espalda_url", label: "Foto espalda", type: "media", folder: "productos" },
+    { key: "foto_perfil_url", label: "Foto Perfil (Perchero cerrado — opcional)", type: "media", folder: "productos", hint: "PNG sin fondo, vertical 2:3" },
+    { key: "foto_frente_url", label: "Foto Frente (Perchero abierto)", type: "media", folder: "productos", hint: "PNG sin fondo, vertical 2:3" },
+    { key: "foto_espalda_url", label: "Foto Espalda (Vista trasera — opcional)", type: "media", folder: "productos", hint: "PNG sin fondo, vertical 2:3" },
     { key: "es_personalizable", label: "Es personalizable", type: "bool" },
     { key: "activo", label: "Activo", type: "bool" },
   ];

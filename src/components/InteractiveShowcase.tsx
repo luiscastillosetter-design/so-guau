@@ -1,12 +1,45 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
 import { ChevronLeft, ChevronRight, Sparkles, X } from "lucide-react";
 import type { Catalog, Product } from "@/lib/catalog";
 import CatalogFilters from "@/components/CatalogFilters";
 import ProductArt, { aspectOf } from "@/components/ProductArt";
+import ClothingRailHero, { type GarmentKind, type RailGarment } from "@/components/ClothingRailHero";
+import { formatBs } from "@/lib/bcv";
+
+const RAIL_LABELS = { front: "Frente", back: "Espalda", close: "Cerrar", show: "Ver" };
+const FALLBACK_COLORS = ["#F6F3EA", "#1E4D24", "#1F2320", "#E8DFC8"];
+const HEX = /^#(?:[0-9a-f]{3}|[0-9a-f]{6})$/i;
+
+function railKind(p: Product): GarmentKind {
+  const text = `${p.formatSlug} ${p.name}`.toLowerCase();
+  if (p.kind === "hoodie" || /hoodie|su[eé]ter|sweater/.test(text)) return "hoodie";
+  if (/chaqueta|jacket/.test(text)) return "jacket";
+  return "tee";
+}
+
+function toRailItem(p: Product, index: number, rate: number | null): RailGarment {
+  const hex = p.colors.map((c) => c.hex).find((h) => HEX.test(h)) ?? FALLBACK_COLORS[index % FALLBACK_COLORS.length];
+  const bs = rate ? `Bs. ${formatBs(p.priceUsd * rate)} a tasa BCV` : "Bs. a tasa BCV del día";
+  const details = [usd(p.priceUsd), bs, ...(p.colors.length ? [`Colores: ${p.colors.map((c) => c.name).join(", ")}`] : []), "Estampado DTF", ...(p.customizable ? ["Personalizable IA"] : [])];
+  return {
+    id: p.id,
+    name: p.name,
+    description: `${usd(p.priceUsd)} · ${bs}`,
+    image: p.images.front || undefined,
+    backImage: p.images.back || undefined,
+    sideImage: p.images.profile || undefined,
+    tag: p.badge || `$${p.priceUsd}`,
+    kind: railKind(p),
+    color: hex,
+    details,
+    href: `/producto/${p.slug}`,
+    studioHref: `/estudio?producto=${p.slug}`,
+  };
+}
 
 const spring = { type: "spring", stiffness: 140, damping: 18, mass: 0.8 } as const;
 const pad = (n: number) => String(n).padStart(2, "0");
@@ -71,124 +104,6 @@ function Price({ p }: { p: Product }) {
       {usd(p.priceUsd)}
       {p.compareAtUsd && <s className="ml-2 text-xs font-normal text-brand-text/45">{usd(p.compareAtUsd)}</s>}
     </span>
-  );
-}
-
-function useIsDesktop() {
-  return useSyncExternalStore(
-    (cb) => {
-      const m = window.matchMedia("(min-width: 768px)");
-      m.addEventListener("change", cb);
-      return () => m.removeEventListener("change", cb);
-    },
-    () => window.matchMedia("(min-width: 768px)").matches,
-    () => true,
-  );
-}
-
-const SQUASH = 0.38;
-const tagOf = (p: Product) => p.badge || (p.customizable ? "PERSONALIZABLE" : "");
-
-function RackItem({ product, active, open, closed, onActivate, onOpen }: { product: Product; active: boolean; open: number; closed: number; onActivate: () => void; onOpen: () => void }) {
-  const frontSrc = product.images.front ?? product.images.back;
-  const profileSrc = product.images.profile;
-  const photo = Boolean(frontSrc || profileSrc);
-  const shadow = "drop-shadow-[0_14px_20px_rgba(0,0,0,0.14)]";
-  const tag = tagOf(product);
-  const tagCls = tag.startsWith("-") ? "text-brand-accent" : "text-brand-primary/70";
-  const squash = !active && !profileSrc;
-  return (
-    <motion.div animate={{ width: active ? open : closed }} transition={spring} onMouseEnter={onActivate} className="relative shrink-0">
-      <div className="flex h-9 items-end justify-center">
-        {tag &&
-          (active ? (
-            <span className={`mb-1 whitespace-nowrap font-ui text-[8.5px] font-semibold uppercase tracking-[0.28em] ${tagCls}`}>{tag}</span>
-          ) : (
-            <span className={`mb-1 max-h-9 overflow-hidden font-ui text-[6.5px] font-semibold uppercase tracking-[0.2em] [writing-mode:vertical-rl] ${tagCls}`}>{tag}</span>
-          ))}
-      </div>
-      <svg viewBox="0 0 40 18" className="relative z-10 mx-auto -mb-1 h-[18px] w-10 text-neutral-700" aria-hidden>
-        <path d="M20 0 V6 Q20 9 23 9 Q27 9 27 6" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-        <path d="M20 9 V11 L4 17 H36 L20 11" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" strokeLinecap="round" />
-      </svg>
-      <button
-        type="button"
-        onClick={() => (active ? onOpen() : onActivate())}
-        onFocus={onActivate}
-        aria-label={active ? `Abrir ${product.name}` : `Ver ${product.name}`}
-        className="relative block h-[300px] w-full cursor-pointer outline-none md:h-[370px]"
-      >
-        <motion.div
-          className="absolute left-1/2 top-0 h-full -translate-x-1/2"
-          style={{ transformOrigin: "50% 0%" }}
-          initial={false}
-          animate={{ width: active ? open : profileSrc ? closed : closed / SQUASH, scaleX: squash ? SQUASH : 1 }}
-          transition={spring}
-        >
-          {photo ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={active ? (frontSrc ?? profileSrc) : (profileSrc ?? frontSrc)} alt={product.name} draggable={false} className={`h-full w-full object-contain object-top ${shadow} ${squash ? "brightness-95" : ""}`} />
-          ) : (
-            <div className={`h-full w-full ${squash ? "brightness-95" : ""}`}>
-              <ProductArt product={product} color={product.colors[0].hex} view="front" />
-            </div>
-          )}
-        </motion.div>
-      </button>
-    </motion.div>
-  );
-}
-
-function AccordionRack({ list, onOpen }: { list: Product[]; onOpen: (i: number) => void }) {
-  const desktop = useIsDesktop();
-  const open = desktop ? 270 : 220;
-  const closed = desktop ? 84 : 64;
-  const [activeIdx, setActiveIdx] = useState(0);
-  const idx = Math.min(activeIdx, list.length - 1);
-  const active = list[idx];
-  const scroller = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const el = scroller.current;
-    if (!el) return;
-    const center = idx * closed + open / 2 + 16;
-    el.scrollTo({ left: Math.max(0, center - el.clientWidth / 2), behavior: "smooth" });
-  }, [idx, open, closed]);
-
-  const go = (d: number) => setActiveIdx((i) => Math.min(list.length - 1, Math.max(0, i + d)));
-
-  return (
-    <div>
-      <motion.div
-        ref={scroller}
-        className="overflow-x-auto overflow-y-hidden pb-2 scrollbar-hide"
-        style={{ touchAction: "pan-y" }}
-        onPanEnd={(_, info) => {
-          if (Math.abs(info.offset.x) > 40 && Math.abs(info.offset.x) > Math.abs(info.offset.y)) go(info.offset.x < 0 ? 1 : -1);
-        }}
-      >
-        <div className="relative w-max min-w-full">
-          <div aria-hidden className="absolute inset-x-0 top-[35px] z-0 h-[2px] bg-neutral-800/80 shadow-[0_2px_4px_rgba(0,0,0,0.22)]" />
-          <div className="relative flex justify-center px-4">
-            {list.map((p, i) => (
-              <RackItem key={p.id} product={p} active={i === idx} open={open} closed={closed} onActivate={() => setActiveIdx(i)} onOpen={() => onOpen(i)} />
-            ))}
-          </div>
-        </div>
-      </motion.div>
-      <div className="mt-4 flex flex-col items-center gap-1.5 px-6 text-center">
-        <p className="font-ui text-[10px] font-semibold uppercase tracking-[0.3em] text-brand-primary/50">
-          {pad(idx + 1)} / {pad(list.length)}
-        </p>
-        <p className="font-display text-2xl text-brand-primary md:text-3xl">{active.name}</p>
-        <p className="font-ui text-xs text-brand-text/60">
-          {active.customizable ? "Personalizable con IA" : "Edición So Guau"} · <Price p={active} />
-        </p>
-        <button type="button" onClick={() => onOpen(idx)} className="mt-2 rounded-full bg-brand-primary px-8 py-3 font-ui text-xs font-semibold uppercase tracking-widest text-brand-on-primary transition hover:-translate-y-0.5 active:scale-95">
-          Ver prenda
-        </button>
-      </div>
-    </div>
   );
 }
 
@@ -372,6 +287,20 @@ export default function InteractiveShowcase({ catalog }: { catalog: Catalog }) {
   const [department, setDepartment] = useState("destacados");
   const [format, setFormat] = useState("todo");
   const [open, setOpen] = useState<number | null>(null);
+  const [rate, setRate] = useState<number | null>(null);
+
+  useEffect(() => {
+    let alive = true;
+    fetch("/api/bcv")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (alive && d?.rate) setRate(d.rate);
+      })
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, []);
 
   const mode = formats.find((f) => f.slug === format)?.displayMode ?? "rack";
   const list = useMemo(
@@ -383,24 +312,14 @@ export default function InteractiveShowcase({ catalog }: { catalog: Catalog }) {
       }),
     [products, department, format],
   );
+  const railItems = useMemo(() => list.map((p, i) => toRailItem(p, i, rate)), [list, rate]);
   const filterKey = `${department}-${format}`;
   const safeOpen = open !== null && open < list.length ? open : null;
 
   return (
-    <section className="bg-brand-bg pb-16 pt-10 md:pb-24 md:pt-16" aria-label="Catálogo">
+    <section className="bg-brand-bg pb-12 pt-4 md:pb-20 md:pt-6" aria-label="Catálogo">
       <div className="container-wide">
-        <div className="mb-8 flex flex-col gap-2 md:mb-10 md:flex-row md:items-end md:justify-between">
-          <div>
-            <p className="font-ui text-[10px] font-semibold uppercase tracking-[0.35em] text-brand-primary/70">El perchero · Colección So Guau</p>
-            <h1 className="mt-3 font-display text-4xl leading-[1.05] text-brand-primary md:text-6xl lg:text-7xl">
-              Moda que deja <em className="text-brand-accent">huellas</em>
-            </h1>
-          </div>
-          <p className="max-w-sm font-ui text-sm leading-relaxed text-brand-text/70 md:text-right">
-            {mode === "rack" ? "Pasa el cursor o desliza para abrir una prenda. Toca la prenda abierta para verla de cerca." : "Piezas de repisa: elige color, mírala de cerca y personalízala."}
-          </p>
-        </div>
-
+        <h1 className="sr-only">So Guau · Moda que deja huellas</h1>
         <CatalogFilters
           departments={departments}
           formats={formats}
@@ -411,7 +330,7 @@ export default function InteractiveShowcase({ catalog }: { catalog: Catalog }) {
         />
       </div>
 
-      <div className="container-wide mt-8 md:mt-12">
+      <div className="container-wide mt-3 md:mt-4">
         <AnimatePresence mode="wait">
           <motion.div key={`${mode}-${filterKey}`} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.35 }}>
             {list.length === 0 ? (
@@ -424,7 +343,7 @@ export default function InteractiveShowcase({ catalog }: { catalog: Catalog }) {
             ) : (
               <>
                 {mode === "rack" ? (
-                  <AccordionRack key={filterKey} list={list} onOpen={setOpen} />
+                  <ClothingRailHero key={filterKey} items={railItems} hanger="wood" labels={RAIL_LABELS} caption="Pasa el cursor o arrastra las prendas · Toca cualquiera para girar 360° y ver detalles" />
                 ) : (
                   <>
                     <div className="hidden md:block">

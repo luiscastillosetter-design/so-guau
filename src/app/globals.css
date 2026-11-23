@@ -12,7 +12,35 @@
 [data-theme="obsidian-gold"] { --brand-bg:#0E0E10; --brand-primary:#C9A227; --brand-accent:#E8D48B; --brand-text:#F2EDE0; --brand-on-primary:#0E0E10; }
 [data-theme="offwhite-forest"] { --brand-bg:#FAFAF7; --brand-primary:#2F4F3A; --brand-accent:#B7C9A8; --brand-text:#1A241D; --brand-on-primary:#FAFAF7; }
 
+/* Tokens semánticos (ClothingRailHero) ligados a la paleta Marca Blanca activa */
+:root, [data-theme] {
+  --background: var(--brand-bg);
+  --foreground: var(--brand-text);
+  --muted-foreground: #4A5D4C;
+  --card: #FFFFFF;
+  --card-foreground: var(--brand-text);
+  --border: color-mix(in oklab, var(--brand-text) 14%, transparent);
+  --ring: var(--brand-primary);
+  --primary: var(--brand-primary);
+  --primary-foreground: var(--brand-on-primary);
+  --accent: var(--brand-accent);
+}
+[data-theme] {
+  --muted-foreground: color-mix(in oklab, var(--brand-text) 72%, var(--brand-bg));
+  --card: color-mix(in oklab, var(--brand-bg) 12%, white);
+}
+
 @theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-border: var(--border);
+  --color-ring: var(--ring);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-accent: var(--accent);
   --color-brand-bg: var(--brand-bg);
   --color-brand-primary: var(--brand-primary);
   --color-brand-accent: var(--brand-accent);
