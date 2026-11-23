@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/admin-auth";
 import { getSupabaseAdmin, hasServiceRole } from "@/lib/supabase/admin";
 
@@ -11,6 +12,13 @@ const TYPES: Record<string, { ext: string; max: number }> = {
   "video/webm": { ext: "webm", max: 50 * 1024 * 1024 },
 };
 const FOLDERS = ["logo", "productos", "hero", "plantillas"];
+
+function revalidateStore() {
+  revalidatePath("/", "layout");
+  revalidatePath("/tienda");
+  revalidatePath("/estudio");
+  revalidatePath("/contacto");
+}
 
 const fail = (error: string, status = 400) => NextResponse.json({ error }, { status });
 
@@ -46,6 +54,7 @@ export async function POST(req: Request) {
       return fail("No se pudo subir. ¿Existe el bucket público 'media'? (ejecuta schema.sql)", 502);
     }
     const { data } = db.storage.from("media").getPublicUrl(path);
+    revalidateStore();
     return NextResponse.json({ url: data.publicUrl });
   } catch (e) {
     console.error("[admin/upload]", e instanceof Error ? e.message : e);

@@ -1,0 +1,9 @@
+-- v2: contacto, redes y footer editables desde /admin (idempotente)
+alter table store_settings add column if not exists email text;
+alter table store_settings add column if not exists telefono text;
+alter table store_settings add column if not exists direccion text;
+alter table store_settings add column if not exists horario text;
+alter table store_settings add column if not exists instagram_url text;
+alter table store_settings add column if not exists tiktok_url text;
+alter table store_settings add column if not exists facebook_url text;
+alter table store_settings add column if not exists footer_descripcion text;

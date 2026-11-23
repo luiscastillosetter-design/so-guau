@@ -25,7 +25,7 @@ interface AdminData {
 
 const TABS = [
   { id: "orders", label: "Pedidos", icon: ClipboardList },
-  { id: "brand", label: "Marca Blanca", icon: Palette },
+  { id: "brand", label: "Marca y Contacto", icon: Palette },
   { id: "structure", label: "Departamentos", icon: Layers },
   { id: "catalog", label: "Catálogo y Stock", icon: Boxes },
   { id: "hero", label: "Hero y Plantillas", icon: ImageIcon },
@@ -190,7 +190,10 @@ export default function AdminDashboard() {
             </div>
           </div>
           <div className="flex items-center gap-3">
-            {d.meta.demoData && <span className="hidden rounded-full bg-amber-100 px-3 py-1 text-xs text-amber-900 sm:inline">Datos demo · sin Supabase</span>}
+            <span className={`rounded-full px-3 py-1 text-xs font-semibold ${d.meta.demoData ? "bg-red-100 text-red-800" : "bg-green-100 text-green-800"}`}>
+              <span aria-hidden className={`mr-1.5 inline-block h-2 w-2 rounded-full ${d.meta.demoData ? "bg-red-600" : "bg-green-600"}`} />
+              {d.meta.demoData ? "Modo Demo (faltan claves en Vercel)" : "Supabase Conectado"}
+            </span>
             <Btn variant="ghost" onClick={logout}><LogOut size={16} /> <span className="hidden sm:inline">Salir</span></Btn>
           </div>
         </div>

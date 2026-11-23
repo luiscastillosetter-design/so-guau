@@ -1,12 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { ShoppingBag, Sparkles, Store } from "lucide-react";
+import { Mail, ShoppingBag, Sparkles, Store } from "lucide-react";
 import { useCart } from "@/context/CartContext";
 
 const links = [
   { href: "/tienda", label: "Tienda", short: "Tienda", icon: Store },
   { href: "/estudio", label: "Personalizador IA", short: "Crear IA", icon: Sparkles },
+  { href: "/contacto", label: "Contacto", short: "Contacto", icon: Mail },
 ];
 
 function Badge({ count }: { count: number }) {
@@ -18,20 +19,20 @@ function Badge({ count }: { count: number }) {
   );
 }
 
-export default function NavbarClient({ logoUrl }: { logoUrl?: string | null }) {
+export default function NavbarClient({ logoUrl, brandName = "So Guau" }: { logoUrl?: string | null; brandName?: string }) {
   const { count, openCart } = useCart();
   return (
     <>
       <header className="sticky top-9 z-40 w-full border-b border-brand-primary/10 bg-brand-bg/90 backdrop-blur">
         <nav className="container-wide flex h-16 items-center justify-between md:h-20">
-          <Link href="/" className="flex items-center gap-3" aria-label="So Guau — inicio">
+          <Link href="/" className="flex items-center gap-3" aria-label={`${brandName} — inicio`}>
             {logoUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={logoUrl} alt="So Guau" className="h-11 w-auto object-contain md:h-12" />
+              <img src={logoUrl} alt={brandName} className="h-11 w-auto object-contain md:h-12" />
             ) : (
               <>
                 <span className="grid h-10 w-10 place-items-center rounded-full bg-brand-primary font-display text-lg text-brand-on-primary">S</span>
-                <span className="font-display text-2xl font-semibold tracking-tight text-brand-primary md:text-3xl">So Guau</span>
+                <span className="font-display text-2xl font-semibold tracking-tight text-brand-primary md:text-3xl">{brandName}</span>
               </>
             )}
           </Link>
@@ -64,7 +65,7 @@ export default function NavbarClient({ logoUrl }: { logoUrl?: string | null }) {
 
       {/* Navegación móvil tipo app */}
       <nav className="fixed inset-x-0 bottom-0 z-50 border-t border-brand-primary/10 bg-brand-bg/95 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden">
-        <ul className="grid grid-cols-3">
+        <ul className="grid grid-cols-4">
           {links.map(({ href, short, icon: Icon }) => (
             <li key={href}>
               <Link href={href} className="flex h-[60px] flex-col items-center justify-center gap-1 font-ui text-[10px] font-medium text-brand-primary">

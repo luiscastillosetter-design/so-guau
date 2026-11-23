@@ -13,6 +13,7 @@ export const ADMIN_DEMO_DATA = {
     eslogan: "Moda que deja huellas",
     dominio: "https://soguau.com",
     logo_url: null,
+    email: "", telefono: "", direccion: "", horario: "", instagram_url: "", tiktok_url: "", facebook_url: "", footer_descripcion: "",
     theme_key: "so-guau",
     whatsapp: "584120000000",
     pago_movil: { banco: "Banco de ejemplo (0000)", telefono: "0412-0000000", cedula: "V-00000000" },

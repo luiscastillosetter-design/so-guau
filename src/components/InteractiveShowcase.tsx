@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
-import { ChevronLeft, ChevronRight, RotateCw, Sparkles, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, Sparkles, X } from "lucide-react";
 import type { Catalog, Product } from "@/lib/catalog";
 import CatalogFilters from "@/components/CatalogFilters";
 import ProductArt, { aspectOf } from "@/components/ProductArt";
@@ -19,7 +19,7 @@ function Garment3D({ product, color, turn, flipped }: { product: Product; color:
   const photo = hasPhoto(product);
   const frontSrc = product.images.profile ?? product.images.front ?? product.images.back;
   const backSrc = product.images.back ?? frontSrc;
-  const shadow = "drop-shadow-[0_18px_22px_rgba(20,38,22,0.16)]";
+  const shadow = "drop-shadow-[0_14px_20px_rgba(0,0,0,0.14)]";
   return (
     <div style={{ perspective: 900 }} className="mx-auto">
       <motion.div style={{ transformStyle: "preserve-3d", transformOrigin: photo ? "50% 0%" : undefined }} animate={{ rotateY: turn }} transition={spring}>
@@ -52,29 +52,6 @@ function Garment3D({ product, color, turn, flipped }: { product: Product; color:
   );
 }
 
-const brushed =
-  "repeating-linear-gradient(90deg, rgba(255,255,255,0.18) 0 1px, rgba(0,0,0,0.05) 1px 2px), linear-gradient(180deg, #f4f3ef 0%, #cfcdc6 28%, #8f8d87 62%, #b9b7b0 100%)";
-
-function RackBar({ slim = false }: { slim?: boolean }) {
-  return (
-    <div className="relative z-10 mx-auto px-3" aria-hidden>
-      <div className={`relative rounded-full ${slim ? "h-2" : "h-[11px]"}`} style={{ backgroundImage: brushed, boxShadow: "0 1px 0 rgba(255,255,255,0.7) inset, 0 14px 16px -10px rgba(20,38,22,0.35), 0 3px 4px -1px rgba(20,38,22,0.18)" }}>
-        <span className="absolute -left-2 top-1/2 h-5 w-2.5 -translate-y-1/2 rounded-[3px]" style={{ backgroundImage: "linear-gradient(90deg, #a9a7a0, #e4e2db 45%, #84827c)" }} />
-        <span className="absolute -right-2 top-1/2 h-5 w-2.5 -translate-y-1/2 rounded-[3px]" style={{ backgroundImage: "linear-gradient(90deg, #a9a7a0, #e4e2db 45%, #84827c)" }} />
-      </div>
-    </div>
-  );
-}
-
-function Hanger() {
-  return (
-    <svg viewBox="0 0 120 46" className="relative z-10 mx-auto -mb-3 h-11 w-28 text-zinc-500" aria-hidden>
-      <path d="M60 22 V16 Q60 4 69 4 Q78 4 78 12" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" />
-      <path d="M60 22 L10 42 H110 Z" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinejoin="round" strokeLinecap="round" />
-    </svg>
-  );
-}
-
 function Badge({ text }: { text?: string }) {
   if (!text) return null;
   const sale = text.startsWith("-");
@@ -97,9 +74,126 @@ function Price({ p }: { p: Product }) {
   );
 }
 
-function DesktopItem({ product, mode, onOpen }: { product: Product; mode: "rack" | "shelf"; onOpen: () => void }) {
+function useIsDesktop() {
+  return useSyncExternalStore(
+    (cb) => {
+      const m = window.matchMedia("(min-width: 768px)");
+      m.addEventListener("change", cb);
+      return () => m.removeEventListener("change", cb);
+    },
+    () => window.matchMedia("(min-width: 768px)").matches,
+    () => true,
+  );
+}
+
+const SQUASH = 0.38;
+const tagOf = (p: Product) => p.badge || (p.customizable ? "PERSONALIZABLE" : "");
+
+function RackItem({ product, active, open, closed, onActivate, onOpen }: { product: Product; active: boolean; open: number; closed: number; onActivate: () => void; onOpen: () => void }) {
+  const frontSrc = product.images.front ?? product.images.back;
+  const profileSrc = product.images.profile;
+  const photo = Boolean(frontSrc || profileSrc);
+  const shadow = "drop-shadow-[0_14px_20px_rgba(0,0,0,0.14)]";
+  const tag = tagOf(product);
+  const tagCls = tag.startsWith("-") ? "text-brand-accent" : "text-brand-primary/70";
+  const squash = !active && !profileSrc;
+  return (
+    <motion.div animate={{ width: active ? open : closed }} transition={spring} onMouseEnter={onActivate} className="relative shrink-0">
+      <div className="flex h-9 items-end justify-center">
+        {tag &&
+          (active ? (
+            <span className={`mb-1 whitespace-nowrap font-ui text-[8.5px] font-semibold uppercase tracking-[0.28em] ${tagCls}`}>{tag}</span>
+          ) : (
+            <span className={`mb-1 max-h-9 overflow-hidden font-ui text-[6.5px] font-semibold uppercase tracking-[0.2em] [writing-mode:vertical-rl] ${tagCls}`}>{tag}</span>
+          ))}
+      </div>
+      <svg viewBox="0 0 40 18" className="relative z-10 mx-auto -mb-1 h-[18px] w-10 text-neutral-700" aria-hidden>
+        <path d="M20 0 V6 Q20 9 23 9 Q27 9 27 6" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+        <path d="M20 9 V11 L4 17 H36 L20 11" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" strokeLinecap="round" />
+      </svg>
+      <button
+        type="button"
+        onClick={() => (active ? onOpen() : onActivate())}
+        onFocus={onActivate}
+        aria-label={active ? `Abrir ${product.name}` : `Ver ${product.name}`}
+        className="relative block h-[300px] w-full cursor-pointer outline-none md:h-[370px]"
+      >
+        <motion.div
+          className="absolute left-1/2 top-0 h-full -translate-x-1/2"
+          style={{ transformOrigin: "50% 0%" }}
+          initial={false}
+          animate={{ width: active ? open : profileSrc ? closed : closed / SQUASH, scaleX: squash ? SQUASH : 1 }}
+          transition={spring}
+        >
+          {photo ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={active ? (frontSrc ?? profileSrc) : (profileSrc ?? frontSrc)} alt={product.name} draggable={false} className={`h-full w-full object-contain object-top ${shadow} ${squash ? "brightness-95" : ""}`} />
+          ) : (
+            <div className={`h-full w-full ${squash ? "brightness-95" : ""}`}>
+              <ProductArt product={product} color={product.colors[0].hex} view="front" />
+            </div>
+          )}
+        </motion.div>
+      </button>
+    </motion.div>
+  );
+}
+
+function AccordionRack({ list, onOpen }: { list: Product[]; onOpen: (i: number) => void }) {
+  const desktop = useIsDesktop();
+  const open = desktop ? 270 : 220;
+  const closed = desktop ? 84 : 64;
+  const [activeIdx, setActiveIdx] = useState(0);
+  const idx = Math.min(activeIdx, list.length - 1);
+  const active = list[idx];
+  const scroller = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const el = scroller.current;
+    if (!el) return;
+    const center = idx * closed + open / 2 + 16;
+    el.scrollTo({ left: Math.max(0, center - el.clientWidth / 2), behavior: "smooth" });
+  }, [idx, open, closed]);
+
+  const go = (d: number) => setActiveIdx((i) => Math.min(list.length - 1, Math.max(0, i + d)));
+
+  return (
+    <div>
+      <motion.div
+        ref={scroller}
+        className="overflow-x-auto overflow-y-hidden pb-2 scrollbar-hide"
+        style={{ touchAction: "pan-y" }}
+        onPanEnd={(_, info) => {
+          if (Math.abs(info.offset.x) > 40 && Math.abs(info.offset.x) > Math.abs(info.offset.y)) go(info.offset.x < 0 ? 1 : -1);
+        }}
+      >
+        <div className="relative w-max min-w-full">
+          <div aria-hidden className="absolute inset-x-0 top-[35px] z-0 h-[2px] bg-neutral-800/80 shadow-[0_2px_4px_rgba(0,0,0,0.22)]" />
+          <div className="relative flex justify-center px-4">
+            {list.map((p, i) => (
+              <RackItem key={p.id} product={p} active={i === idx} open={open} closed={closed} onActivate={() => setActiveIdx(i)} onOpen={() => onOpen(i)} />
+            ))}
+          </div>
+        </div>
+      </motion.div>
+      <div className="mt-4 flex flex-col items-center gap-1.5 px-6 text-center">
+        <p className="font-ui text-[10px] font-semibold uppercase tracking-[0.3em] text-brand-primary/50">
+          {pad(idx + 1)} / {pad(list.length)}
+        </p>
+        <p className="font-display text-2xl text-brand-primary md:text-3xl">{active.name}</p>
+        <p className="font-ui text-xs text-brand-text/60">
+          {active.customizable ? "Personalizable con IA" : "Edición So Guau"} · <Price p={active} />
+        </p>
+        <button type="button" onClick={() => onOpen(idx)} className="mt-2 rounded-full bg-brand-primary px-8 py-3 font-ui text-xs font-semibold uppercase tracking-widest text-brand-on-primary transition hover:-translate-y-0.5 active:scale-95">
+          Ver prenda
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function ShelfItem({ product, onOpen }: { product: Product; onOpen: () => void }) {
   const [hover, setHover] = useState(false);
-  const rack = mode === "rack";
   return (
     <motion.button
       type="button"
@@ -108,36 +202,28 @@ function DesktopItem({ product, mode, onOpen }: { product: Product; mode: "rack"
       onHoverEnd={() => setHover(false)}
       onFocus={() => setHover(true)}
       onBlur={() => setHover(false)}
-      whileHover={rack ? undefined : { y: -14 }}
+      whileHover={{ y: -14 }}
       transition={spring}
-      className={`group flex min-w-0 flex-col text-left outline-none ${rack ? "" : "justify-end"}`}
+      className="group flex min-w-0 flex-col justify-end text-left outline-none"
       aria-label={`Abrir ${product.name}`}
     >
-      {rack && !hasPhoto(product) && <Hanger />}
-      {rack && hasPhoto(product) && <span aria-hidden className="mx-auto h-3 w-px bg-zinc-400" />}
       <div className="px-2">
-        <Garment3D product={product} color={product.colors[0].hex} turn={rack ? (hover ? 0 : hasPhoto(product) ? -24 : -68) : hover ? -14 : 0} flipped={false} />
+        <Garment3D product={product} color={product.colors[0].hex} turn={hover ? -14 : 0} flipped={false} />
       </div>
-      {!rack && (
-        <motion.div aria-hidden className="mx-auto mt-1 h-2 w-3/5 rounded-[50%] bg-brand-text/25 blur-md" animate={{ scaleX: hover ? 0.7 : 1, opacity: hover ? 0.5 : 1 }} transition={spring} />
-      )}
+      <motion.div aria-hidden className="mx-auto mt-1 h-2 w-3/5 rounded-[50%] bg-brand-text/25 blur-md" animate={{ scaleX: hover ? 0.7 : 1, opacity: hover ? 0.5 : 1 }} transition={spring} />
       <div className="mt-4 flex min-h-[4.5rem] flex-col items-center gap-1.5 text-center">
         <Badge text={product.badge} />
-        <motion.div animate={{ opacity: rack ? (hover ? 1 : 0) : 1, y: rack && !hover ? 6 : 0 }} transition={{ duration: 0.3 }} className="flex flex-col items-center gap-0.5">
-          <span className="font-display text-base leading-tight text-brand-primary">{product.name}</span>
-          <Price p={product} />
-        </motion.div>
+        <span className="font-display text-base leading-tight text-brand-primary">{product.name}</span>
+        <Price p={product} />
       </div>
     </motion.button>
   );
 }
 
-function MobileCarousel({ list, mode, onOpen }: { list: Product[]; mode: "rack" | "shelf"; onOpen: (i: number) => void }) {
+function ShelfMobile({ list, onOpen }: { list: Product[]; onOpen: (i: number) => void }) {
   const [activeId, setActiveId] = useState<string | null>(null);
-  const [flipped, setFlipped] = useState(false);
   const idx = Math.max(0, list.findIndex((p) => p.id === activeId));
   const active = list[idx];
-  const rack = mode === "rack";
 
   function onScroll(e: React.UIEvent<HTMLDivElement>) {
     const el = e.currentTarget;
@@ -153,32 +239,18 @@ function MobileCarousel({ list, mode, onOpen }: { list: Product[]; mode: "rack" 
       }
     });
     const next = list[best]?.id ?? null;
-    if (next !== activeId) {
-      setActiveId(next);
-      setFlipped(false);
-    }
+    if (next !== activeId) setActiveId(next);
   }
 
   return (
     <div>
       <div onScroll={onScroll} className="flex snap-x snap-mandatory gap-2 overflow-x-auto px-[19vw] pb-2 scrollbar-hide">
-        {list.map((p, i) => {
-          const rel = i - idx;
-          const isActive = rel === 0;
-          return (
-            <motion.div
-              key={p.id}
-              animate={{ opacity: isActive ? 1 : 0.65, scale: isActive ? 1 : 0.86 }}
-              transition={spring}
-              className="w-[62vw] shrink-0 snap-center"
-            >
-              {rack && !hasPhoto(p) && <Hanger />}
-              {rack && hasPhoto(p) && <span aria-hidden className="mx-auto block h-3 w-px bg-zinc-400" />}
-              <Garment3D product={p} color={p.colors[0].hex} turn={isActive ? 0 : rel < 0 ? 62 : -62} flipped={isActive && flipped} />
-              {!rack && <div className="-mx-4 mt-1 h-3 rounded-sm bg-gradient-to-b from-stone-100 to-stone-300 shadow-[0_12px_20px_-10px_rgba(20,38,22,0.35)]" />}
-            </motion.div>
-          );
-        })}
+        {list.map((p, i) => (
+          <motion.div key={p.id} animate={{ opacity: i === idx ? 1 : 0.65, scale: i === idx ? 1 : 0.86 }} transition={spring} className="w-[62vw] shrink-0 snap-center">
+            <Garment3D product={p} color={p.colors[0].hex} turn={0} flipped={false} />
+            <div className="-mx-4 mt-1 h-3 rounded-sm bg-gradient-to-b from-stone-100 to-stone-300 shadow-[0_12px_20px_-10px_rgba(20,38,22,0.35)]" />
+          </motion.div>
+        ))}
       </div>
       <div className="mt-3 flex flex-col items-center gap-1 px-6 text-center">
         <Badge text={active.badge} />
@@ -188,12 +260,8 @@ function MobileCarousel({ list, mode, onOpen }: { list: Product[]; mode: "rack" 
           {pad(idx + 1)} / {pad(list.length)}
         </p>
       </div>
-      <div className="mt-4 grid grid-cols-2 gap-3 px-1">
-        <button type="button" onClick={() => setFlipped((f) => !f)} className="flex h-14 items-center justify-center gap-2 rounded-full border border-brand-primary/30 font-ui text-xs font-semibold uppercase tracking-widest text-brand-primary active:scale-95">
-          <RotateCw className="h-4 w-4" />
-          {flipped ? "Espalda" : "Frente"}
-        </button>
-        <button type="button" onClick={() => onOpen(idx)} className="flex h-14 items-center justify-center rounded-full bg-brand-primary font-ui text-xs font-semibold uppercase tracking-widest text-brand-on-primary active:scale-95">
+      <div className="mt-4 px-1">
+        <button type="button" onClick={() => onOpen(idx)} className="flex h-14 w-full items-center justify-center rounded-full bg-brand-primary font-ui text-xs font-semibold uppercase tracking-widest text-brand-on-primary active:scale-95">
           Ver / Personalizar
         </button>
       </div>
@@ -290,7 +358,7 @@ function FocusPanel({ list, index, onIndex, onClose }: { list: Product[]; index:
             </Link>
             <Link href={`/estudio?producto=${p.slug}`} className="flex flex-1 items-center justify-center gap-2 rounded-full bg-brand-accent px-6 py-4 text-center font-ui text-xs font-bold uppercase tracking-widest text-brand-text transition hover:-translate-y-0.5">
               <Sparkles className="h-4 w-4" />
-              Personalizar este diseño
+              Personalizar con IA
             </Link>
           </div>
         </div>
@@ -329,7 +397,7 @@ export default function InteractiveShowcase({ catalog }: { catalog: Catalog }) {
             </h1>
           </div>
           <p className="max-w-sm font-ui text-sm leading-relaxed text-brand-text/70 md:text-right">
-            {mode === "rack" ? "Pasa el cursor por una prenda y mírala de frente. Toca para ver los detalles." : "Piezas de repisa: elige color, mírala de cerca y personalízala."}
+            {mode === "rack" ? "Pasa el cursor o desliza para abrir una prenda. Toca la prenda abierta para verla de cerca." : "Piezas de repisa: elige color, mírala de cerca y personalízala."}
           </p>
         </div>
 
@@ -355,30 +423,28 @@ export default function InteractiveShowcase({ catalog }: { catalog: Catalog }) {
               </div>
             ) : (
               <>
-                {/* PC */}
-                <div className="hidden md:block">
-                  {mode === "rack" && (
-                    <RackBar />
-                  )}
-                  <div className="-mt-2 overflow-x-auto scrollbar-hide">
-                    <div className="grid gap-4 pb-2 pt-1" style={{ gridTemplateColumns: `repeat(${list.length}, minmax(11.5rem, 1fr))` }}>
-                      {list.map((p, i) => (
-                        <DesktopItem key={p.id} product={p} mode={mode} onOpen={() => setOpen(i)} />
-                      ))}
+                {mode === "rack" ? (
+                  <AccordionRack key={filterKey} list={list} onOpen={setOpen} />
+                ) : (
+                  <>
+                    <div className="hidden md:block">
+                      <div className="overflow-x-auto scrollbar-hide">
+                        <div className="grid gap-4 pb-2 pt-1" style={{ gridTemplateColumns: `repeat(${list.length}, minmax(11.5rem, 1fr))` }}>
+                          {list.map((p, i) => (
+                            <ShelfItem key={p.id} product={p} onOpen={() => setOpen(i)} />
+                          ))}
+                        </div>
+                      </div>
+                      <div className="relative -mt-14">
+                        <div className="h-5 rounded-sm bg-gradient-to-b from-stone-100 to-stone-300 shadow-[0_18px_30px_-12px_rgba(20,38,22,0.35)]" />
+                        <div className="mx-6 h-2 rounded-b bg-stone-400/60" />
+                      </div>
                     </div>
-                  </div>
-                  {mode === "shelf" && (
-                    <div className="relative -mt-14">
-                      <div className="h-5 rounded-sm bg-gradient-to-b from-stone-100 to-stone-300 shadow-[0_18px_30px_-12px_rgba(20,38,22,0.35)]" />
-                      <div className="mx-6 h-2 rounded-b bg-stone-400/60" />
+                    <div className="md:hidden">
+                      <ShelfMobile key={filterKey} list={list} onOpen={setOpen} />
                     </div>
-                  )}
-                </div>
-                {/* Móvil */}
-                <div className="md:hidden">
-                  {mode === "rack" && <RackBar slim />}
-                  <MobileCarousel key={filterKey} list={list} mode={mode} onOpen={setOpen} />
-                </div>
+                  </>
+                )}
               </>
             )}
           </motion.div>

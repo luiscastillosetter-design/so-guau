@@ -11,6 +11,15 @@ export interface StoreSettings {
   themeKey: string;
   brandName: string;
   logoUrl: string | null;
+  eslogan: string;
+  email: string;
+  telefono: string;
+  direccion: string;
+  horario: string;
+  instagramUrl: string;
+  tiktokUrl: string;
+  facebookUrl: string;
+  footerDescripcion: string;
   promptBot: string;
   source: "supabase" | "demo";
 }
@@ -29,6 +38,15 @@ export const DEMO_SETTINGS: StoreSettings = {
   themeKey: "so-guau",
   brandName: "So Guau",
   logoUrl: null,
+  eslogan: "Moda que deja huellas",
+  email: "",
+  telefono: "",
+  direccion: "",
+  horario: "",
+  instagramUrl: "",
+  tiktokUrl: "",
+  facebookUrl: "",
+  footerDescripcion: "Moda para ti y tu mejor amigo. Prendas y objetos personalizados con diseños que dejan huellas.",
   promptBot: "",
   source: "demo",
 };
@@ -66,8 +84,17 @@ export async function getStoreSettings(): Promise<StoreSettings> {
         rif: s(tr.rif, d.transferencia.rif),
       },
       themeKey: s(data.theme_key, d.themeKey),
-      brandName: s(data.brand_name ?? data.nombre_marca ?? data.name, d.brandName),
+      brandName: s(data.nombre ?? data.brand_name ?? data.nombre_marca ?? data.name, d.brandName),
       logoUrl: s(data.logo_url, "") || null,
+      eslogan: s(data.eslogan, d.eslogan),
+      email: s(data.email, ""),
+      telefono: s(data.telefono, ""),
+      direccion: s(data.direccion, ""),
+      horario: s(data.horario, ""),
+      instagramUrl: s(data.instagram_url, ""),
+      tiktokUrl: s(data.tiktok_url, ""),
+      facebookUrl: s(data.facebook_url, ""),
+      footerDescripcion: s(data.footer_descripcion, d.footerDescripcion),
       promptBot: s(data.prompt_bot, ""),
       source: "supabase",
     };

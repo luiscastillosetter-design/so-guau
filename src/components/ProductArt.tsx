@@ -1,7 +1,5 @@
 import type { Motif, Product, ProductKind, ProductView } from "@/lib/catalog";
 
-const PINK = "#F991C3";
-
 export function isLight(hex: string) {
   const h = hex.replace("#", "");
   const n = parseInt(h.length === 3 ? h.replace(/(.)/g, "$1$1") : h.slice(0, 6), 16);
@@ -13,66 +11,19 @@ export function isLight(hex: string) {
 }
 
 function MotifArt({ motif, ink, text }: { motif: Motif; ink: string; text: string }) {
-  switch (motif) {
-    case "paw":
-      return (
-        <g fill={ink}>
-          <ellipse cx="0" cy="8" rx="15" ry="12" />
-          <circle cx="-17" cy="-8" r="6" />
-          <circle cx="-6" cy="-18" r="6" />
-          <circle cx="7" cy="-18" r="6" />
-          <circle cx="18" cy="-8" r="6" />
-        </g>
-      );
-    case "frenchie":
-      return (
-        <g>
-          <path d="M-22 -6 L-26 -30 L-8 -18 Z M22 -6 L26 -30 L8 -18 Z" fill={ink} />
-          <ellipse cx="0" cy="2" rx="22" ry="20" fill={ink} />
-          <circle cx="-8" cy="-2" r="2.6" fill={PINK} />
-          <circle cx="8" cy="-2" r="2.6" fill={PINK} />
-          <ellipse cx="0" cy="9" rx="5" ry="3.4" fill={PINK} />
-        </g>
-      );
-    case "cat":
-      return (
-        <g>
-          <path d="M-22 -4 L-20 -30 L-4 -16 Z M22 -4 L20 -30 L4 -16 Z" fill={ink} />
-          <ellipse cx="0" cy="4" rx="23" ry="19" fill={ink} />
-          <path d="M-12 0 q4 -4 8 0 M4 0 q4 -4 8 0" stroke={PINK} strokeWidth="2.4" fill="none" strokeLinecap="round" />
-          <path d="M-3 9 L3 9 L0 13 Z" fill={PINK} />
-        </g>
-      );
-    case "tree":
-      return (
-        <g fill={ink}>
-          <path d="M0 -32 L14 -10 H6 L18 10 H-18 L-6 -10 H-14 Z" />
-          <rect x="-3.5" y="10" width="7" height="9" />
-          <circle cx="0" cy="-34" r="3.4" fill={PINK} />
-          <circle cx="-7" cy="0" r="2.2" fill={PINK} />
-          <circle cx="8" cy="4" r="2.2" fill={PINK} />
-        </g>
-      );
-    case "tower":
-      return (
-        <g fill={ink}>
-          {[16, -2, -20].map((y, i) => (
-            <g key={y} transform={`translate(0 ${y}) scale(${1 - i * 0.12})`}>
-              <path d="M-14 -8 L-16 -20 L-6 -12 Z M14 -8 L16 -20 L6 -12 Z" />
-              <ellipse cx="0" cy="0" rx="15" ry="12" />
-              <circle cx="-5" cy="-1" r="1.8" fill={PINK} />
-              <circle cx="5" cy="-1" r="1.8" fill={PINK} />
-            </g>
-          ))}
-        </g>
-      );
-    default:
-      return (
-        <text textAnchor="middle" y="4" fontSize={text.length > 8 ? 10 : 13} fontWeight="700" letterSpacing="2" fill={ink} fontFamily="Georgia, serif">
-          {text}
-        </text>
-      );
-  }
+  // Estampado editorial sobrio: tipografía discreta, sin ilustraciones.
+  const label = motif === "text" && text.trim() ? text.trim().toUpperCase() : "SO GUAU";
+  return (
+    <g fill={ink}>
+      <text textAnchor="middle" y="0" fontSize={label.length > 8 ? 9 : 12} fontWeight="600" letterSpacing="3" fontFamily="Georgia, serif">
+        {label}
+      </text>
+      <rect x="-14" y="7" width="28" height="0.8" opacity=".55" />
+      <text textAnchor="middle" y="17" fontSize="4.2" letterSpacing="2.4" opacity=".6" fontFamily="sans-serif">
+        EST. STUDIO
+      </text>
+    </g>
+  );
 }
 
 const outline = "rgba(20,38,22,0.22)";
@@ -81,8 +32,16 @@ function Tee({ color, view }: { color: string; view: ProductView }) {
   const collar = view === "back" ? "M70 18 Q100 28 130 18" : "M70 18 Q100 46 130 18";
   return (
     <>
+      <defs>
+        <linearGradient id="cotton" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stopColor="#fff" stopOpacity=".22" />
+          <stop offset=".55" stopColor="#fff" stopOpacity="0" />
+          <stop offset="1" stopColor="#000" stopOpacity=".12" />
+        </linearGradient>
+      </defs>
       <path d="M70 18 L30 38 L8 80 L36 94 L50 76 L50 206 L150 206 L150 76 L164 94 L192 80 L170 38 L130 18 Q100 40 70 18 Z" fill={color} stroke={outline} strokeWidth="1.5" strokeLinejoin="round" />
-      <path d="M50 76 L50 206 L72 206 L72 40 Z" fill="rgba(0,0,0,0.05)" />
+      <path d="M70 18 L30 38 L8 80 L36 94 L50 76 L50 206 L150 206 L150 76 L164 94 L192 80 L170 38 L130 18 Q100 40 70 18 Z" fill="url(#cotton)" />
+      <path d="M50 76 L50 206 L72 206 L72 40 Z" fill="rgba(0,0,0,0.04)" />
       <path d={collar} fill="none" stroke={outline} strokeWidth="3" strokeLinecap="round" />
       <path d="M52 200 H148" stroke="rgba(0,0,0,0.12)" strokeWidth="1" />
     </>
@@ -92,8 +51,16 @@ function Tee({ color, view }: { color: string; view: ProductView }) {
 function Hoodie({ color, view }: { color: string; view: ProductView }) {
   return (
     <>
+      <defs>
+        <linearGradient id="cotton" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stopColor="#fff" stopOpacity=".22" />
+          <stop offset=".55" stopColor="#fff" stopOpacity="0" />
+          <stop offset="1" stopColor="#000" stopOpacity=".12" />
+        </linearGradient>
+      </defs>
       <path d="M72 34 L28 56 L12 172 L40 178 L52 112 L52 226 L148 226 L148 112 L160 178 L188 172 L172 56 L128 34 Q100 56 72 34 Z" fill={color} stroke={outline} strokeWidth="1.5" strokeLinejoin="round" />
-      <path d="M52 112 L52 226 L74 226 L74 44 Z" fill="rgba(0,0,0,0.05)" />
+      <path d="M72 34 L28 56 L12 172 L40 178 L52 112 L52 226 L148 226 L148 112 L160 178 L188 172 L172 56 L128 34 Q100 56 72 34 Z" fill="url(#cotton)" />
+      <path d="M52 112 L52 226 L74 226 L74 44 Z" fill="rgba(0,0,0,0.04)" />
       <path d="M66 36 Q58 0 100 4 Q142 0 134 36 Q100 62 66 36 Z" fill={color} stroke={outline} strokeWidth="1.5" />
       {view === "back" ? (
         <path d="M100 8 V44" stroke={outline} strokeWidth="1.2" />

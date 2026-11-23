@@ -195,3 +195,13 @@ insert into custom_templates (slug, nombre, descripcion, modo, max_fotos, prompt
   ('diseno-libre', 'Diseño Libre DTF', 'Sube tu propia imagen o logo', 'libre', 1,
    'Clean up the uploaded image or logo for DTF printing: isolate the subject, sharpen edges and keep the original design and colors faithful without adding new elements.')
 on conflict (slug) do nothing;
+
+-- v2: contacto, redes y footer editables desde /admin (idempotente; ver migration_v2_contacto.sql)
+alter table store_settings add column if not exists email text;
+alter table store_settings add column if not exists telefono text;
+alter table store_settings add column if not exists direccion text;
+alter table store_settings add column if not exists horario text;
+alter table store_settings add column if not exists instagram_url text;
+alter table store_settings add column if not exists tiktok_url text;
+alter table store_settings add column if not exists facebook_url text;
+alter table store_settings add column if not exists footer_descripcion text;

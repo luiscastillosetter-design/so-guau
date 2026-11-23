@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/admin-auth";
 import { getSupabaseAdmin, hasServiceRole } from "@/lib/supabase/admin";
 
@@ -6,6 +7,13 @@ const TABLES = ["store_settings", "departments", "product_formats", "blank_stock
 const ORDER_STATES = ["por_verificar", "confirmado", "en_taller", "enviado"];
 const RESERVED = ["created_at"];
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function revalidateStore() {
+  revalidatePath("/", "layout");
+  revalidatePath("/tienda");
+  revalidatePath("/estudio");
+  revalidatePath("/contacto");
+}
 
 const fail = (error: string, status = 400) => NextResponse.json({ error }, { status });
 
@@ -48,6 +56,7 @@ export async function POST(req: Request) {
       if (!uuid.test(id)) return fail("ID inválido");
       const { error } = await db.from(table).delete().eq("id", id);
       if (error) return fail(error.message, 400);
+      revalidateStore();
       return NextResponse.json({ ok: true });
     }
     if (action === "update") {
@@ -55,12 +64,14 @@ export async function POST(req: Request) {
       delete values.id;
       const { data, error } = await db.from(table).update(values).eq("id", id).select().maybeSingle();
       if (error) return fail(error.message, 400);
+      revalidateStore();
       return NextResponse.json({ ok: true, row: data });
     }
     // upsert: sin id válido se crea una fila nueva
     if (!uuid.test(String(values.id ?? ""))) delete values.id;
     const { data, error } = await db.from(table).upsert(values).select().maybeSingle();
     if (error) return fail(error.message, 400);
+    revalidateStore();
     return NextResponse.json({ ok: true, row: data });
   } catch (e) {
     console.error("[admin/crud]", e instanceof Error ? e.message : e);
