@@ -25,6 +25,13 @@
   --primary-foreground: var(--brand-on-primary);
   --accent: var(--brand-accent);
 }
+:root, [data-theme] {
+  --color-foreground: #142616;
+  --color-muted-foreground: #526154;
+}
+[data-theme="sand-navy"] { --color-foreground: #0D1526; --color-muted-foreground: #4A5568; }
+[data-theme="obsidian-gold"] { --color-foreground: #F2EDE0; --color-muted-foreground: #B8B3A5; }
+[data-theme="offwhite-forest"] { --color-foreground: #1A241D; --color-muted-foreground: #4A5D4C; }
 [data-theme] {
   --muted-foreground: color-mix(in oklab, var(--brand-text) 72%, var(--brand-bg));
   --card: color-mix(in oklab, var(--brand-bg) 12%, white);

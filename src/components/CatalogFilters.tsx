@@ -26,7 +26,7 @@ export default function CatalogFilters({ departments, formats, department, forma
     <div className="flex flex-col gap-3">
       <div className="flex items-center gap-4">
         <span className="hidden w-20 shrink-0 font-ui text-[10px] font-semibold uppercase tracking-[0.3em] text-brand-primary/60 md:block">Tema</span>
-        <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 scrollbar-hide md:mx-0 md:px-0" role="tablist" aria-label="Departamento">
+        <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 pr-4 py-1 scrollbar-hide md:mx-0 md:pl-0" role="tablist" aria-label="Departamento">
           {departments.map((d) => (
             <button key={d.slug} type="button" role="tab" aria-selected={department === d.slug} onClick={() => onDepartment(d.slug)} className={pill(department === d.slug)}>
               {d.name}
@@ -36,7 +36,7 @@ export default function CatalogFilters({ departments, formats, department, forma
       </div>
       <div className="flex items-center gap-4">
         <span className="hidden w-20 shrink-0 font-ui text-[10px] font-semibold uppercase tracking-[0.3em] text-brand-primary/60 md:block">Formato</span>
-        <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 scrollbar-hide md:mx-0 md:px-0" role="tablist" aria-label="Formato">
+        <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 pr-4 py-1 scrollbar-hide md:mx-0 md:pl-0" role="tablist" aria-label="Formato">
           {formats.map((f) => (
             <button key={f.slug} type="button" role="tab" aria-selected={format === f.slug} onClick={() => onFormat(f.slug)} className={pill(format === f.slug)}>
               {f.name}

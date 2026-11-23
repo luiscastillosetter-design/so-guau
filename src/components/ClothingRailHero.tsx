@@ -50,6 +50,8 @@ export interface ClothingRailHeroProps extends React.ComponentProps<"section"> {
   action?: React.ReactNode;
   /** Turns the pieces to the front one by one until the visitor interacts. */
   autoplay?: boolean;
+  /** Piece turned to the front on load; it stays open when the pointer leaves. */
+  initialActive?: number | null;
   /** Milliseconds each piece faces the front during autoplay. */
   interval?: number;
   /** Drawn hanger. Use "none" when your photos already include a hanger with its hook at the top. */
@@ -535,6 +537,7 @@ export function ClothingRailHero({
   caption,
   action,
   autoplay = false,
+  initialActive = null,
   interval = 2600,
   hanger = "wood",
   labels = DEFAULT_LABELS,
@@ -555,8 +558,9 @@ export function ClothingRailHero({
   const tags = React.useRef([] as (HTMLSpanElement | null)[]);
   const sim = React.useRef(emptySim());
   const [size, setSize] = React.useState({ width: 0, h: 300, carousel: false });
-  const [active, setActive] = React.useState(null as number | null);
-  const [focusIndex, setFocusIndex] = React.useState(0);
+  const startActive = initialActive !== null && initialActive >= 0 && initialActive < items.length ? initialActive : null;
+  const [active, setActive] = React.useState(startActive);
+  const [focusIndex, setFocusIndex] = React.useState(startActive ?? 0);
   const [openIndex, setOpenIndex] = React.useState(null as number | null);
   const [reduced, setReduced] = React.useState(false);
   const [playing, setPlaying] = React.useState(autoplay);
@@ -565,7 +569,7 @@ export function ClothingRailHero({
   const pendingOpen = React.useRef(-1);
   const pointer = React.useRef({ id: -1, index: -1, x: 0, y: 0, t: 0, moved: false, kind: "", swipe: 0, lastX: 0, lastT: 0, v: 0 });
   const sideWidths = React.useMemo(() => items.map((item) => (item.image ? (item.sideImage ? 0.3 : 0.4) : SIDE[item.kind ?? "tee"].width)), [items]);
-  const live = React.useRef({ active: null as number | null, size, reduced, count, openIndex: null as number | null, carouselIndex: 0, sideWidths });
+  const live = React.useRef({ active: startActive, size, reduced, count, openIndex: null as number | null, carouselIndex: startActive ?? 0, sideWidths });
   live.current = { ...live.current, active, size, reduced, count, openIndex, sideWidths };
 
   const carouselIndex = size.carousel ? (active ?? live.current.carouselIndex) : null;
@@ -953,17 +957,17 @@ export function ClothingRailHero({
         onPointerDown={onPointerDown}
         onPointerUp={(event) => finishPointer(event, false)}
         onPointerCancel={(event) => finishPointer(event, true)}
-        onPointerLeave={(event) => { if (event.pointerType === "mouse" && pointer.current.id < 0 && !size.carousel && !document.activeElement?.matches("[data-garment]:focus-visible")) choose(null); }}
+        onPointerLeave={(event) => { if (event.pointerType === "mouse" && pointer.current.id < 0 && !size.carousel && !document.activeElement?.matches("[data-garment]:focus-visible")) { if (startActive === null) choose(null); } }}
         onKeyDown={onKeyDown}
       >
         <div aria-hidden="true" data-rail className="pointer-events-none absolute inset-x-0 z-0" style={{ top: railY - railR, height: railR * 2 }}>
           <div className="absolute inset-x-0 h-3 rounded-full bg-foreground/10 blur-[5px]" style={{ top: railR * 2 + 1 }} />
-          <div className="absolute inset-0 rounded-full" style={{ background: "linear-gradient(to bottom, color-mix(in oklab, var(--color-muted-foreground) 35%, white) 0%, white 18%, color-mix(in oklab, var(--color-muted-foreground) 70%, white) 38%, var(--color-muted-foreground) 62%, color-mix(in oklab, var(--color-muted-foreground) 55%, black) 100%)", boxShadow: "0 1px 0 color-mix(in oklab, var(--color-foreground) 18%, transparent)" }} />
+          <div className="absolute inset-0 rounded-full" style={{ background: "linear-gradient(to bottom, #9ca3af 0%, #e5e7eb 22%, #6b7280 58%, #374151 100%)", boxShadow: "0 1px 0 rgba(0,0,0,0.35), 0 0 0 1px rgba(55,65,81,0.45)" }} />
           <div className="absolute inset-0 rounded-full opacity-40 mix-blend-overlay" style={{ background: "repeating-linear-gradient(90deg, transparent 0 2px, color-mix(in oklab, white 40%, transparent) 2px 3px, transparent 3px 7px)" }} />
           {[0, 1].map((side) => (
-            <div key={side} className="absolute top-1/2 h-7 w-4 -translate-y-1/2 rounded-[3px]" style={{ [side ? "right" : "left"]: 6, background: "linear-gradient(to right, color-mix(in oklab, var(--color-muted-foreground) 60%, white), var(--color-muted-foreground) 55%, color-mix(in oklab, var(--color-muted-foreground) 60%, black))", boxShadow: "0 3px 6px color-mix(in oklab, var(--color-foreground) 18%, transparent)" }}>
-              <span className="absolute left-1/2 top-1 size-1 -translate-x-1/2 rounded-full bg-foreground/35" />
-              <span className="absolute bottom-1 left-1/2 size-1 -translate-x-1/2 rounded-full bg-foreground/35" />
+            <div key={side} className="absolute top-1/2 h-7 w-4 -translate-y-1/2 rounded-[3px]" style={{ [side ? "right" : "left"]: 6, background: "linear-gradient(to right, #d1d5db, #6b7280 55%, #1f2937)", border: "1px solid #1f2937", boxShadow: "0 3px 6px rgba(0,0,0,0.3)" }}>
+              <span className="absolute left-1/2 top-1 size-1 -translate-x-1/2 rounded-full bg-[#111827]/70" />
+              <span className="absolute bottom-1 left-1/2 size-1 -translate-x-1/2 rounded-full bg-[#111827]/70" />
             </div>
           ))}
         </div>
@@ -1014,10 +1018,10 @@ export function ClothingRailHero({
                     </span>
                   ))}
                 </span>
-                {item.tag && (
+                {item.tag && (turned || item.tag.length <= 7) && (
                   <span ref={(node) => { tags.current[i] = node; }} aria-hidden="true" className="pointer-events-none absolute left-1/2 origin-top" style={{ top: (32 / VB_H) * h, transform: "rotate(-12deg)" }}>
-                    <span className="block h-[14px] w-px translate-x-[3px] bg-foreground/35" />
-                    <span className="block -translate-x-1/2 translate-x-[3px] whitespace-nowrap rounded-[3px] border border-foreground/10 bg-card px-1.5 pb-1 pt-2 text-[9px] font-semibold leading-none tracking-wide text-card-foreground shadow-[0_2px_6px_color-mix(in_oklab,var(--color-foreground)_18%,transparent)]">
+                    <span className="block h-[14px] w-px translate-x-[3px] bg-[#142616]/40" />
+                    <span className="relative block -translate-x-1/2 translate-x-[3px] whitespace-nowrap rounded-[3px] border border-black/15 bg-white px-1.5 pb-1 pt-2 text-[9px] font-semibold leading-none tracking-wide text-[#142616] shadow-[0_2px_6px_rgba(0,0,0,0.18)]">
                       <span className="absolute left-1/2 top-[3px] size-[3px] -translate-x-1/2 rounded-full bg-foreground/30" />
                       {item.tag}
                     </span>

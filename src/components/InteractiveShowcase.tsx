@@ -32,7 +32,7 @@ function toRailItem(p: Product, index: number, rate: number | null): RailGarment
     image: p.images.front || undefined,
     backImage: p.images.back || undefined,
     sideImage: p.images.profile || undefined,
-    tag: p.badge || `$${p.priceUsd}`,
+    tag: p.badge && p.badge.length <= 7 ? p.badge : `$${p.priceUsd}`,
     kind: railKind(p),
     color: hex,
     details,
@@ -303,15 +303,16 @@ export default function InteractiveShowcase({ catalog }: { catalog: Catalog }) {
   }, []);
 
   const mode = formats.find((f) => f.slug === format)?.displayMode ?? "rack";
-  const list = useMemo(
-    () =>
-      products.filter((p) => {
-        const byDept = department === "destacados" ? p.featured : p.departmentSlug === department;
-        const byFormat = format === "todo" ? p.displayMode === "rack" : p.formatSlug === format;
-        return byDept && byFormat;
-      }),
-    [products, department, format],
-  );
+  const list = useMemo(() => {
+    const base = products.filter((p) => {
+      const byDept = department === "destacados" ? p.featured : p.departmentSlug === department;
+      const byFormat = format === "todo" ? p.displayMode === "rack" : p.formatSlug === format;
+      return byDept && byFormat;
+    });
+    if (department !== "destacados" || format !== "todo") return base;
+    const filler = products.filter((p) => p.displayMode === "rack" && !base.includes(p));
+    return [...base, ...filler].slice(0, 7);
+  }, [products, department, format]);
   const railItems = useMemo(() => list.map((p, i) => toRailItem(p, i, rate)), [list, rate]);
   const filterKey = `${department}-${format}`;
   const safeOpen = open !== null && open < list.length ? open : null;
@@ -343,7 +344,18 @@ export default function InteractiveShowcase({ catalog }: { catalog: Catalog }) {
             ) : (
               <>
                 {mode === "rack" ? (
-                  <ClothingRailHero key={filterKey} items={railItems} hanger="wood" labels={RAIL_LABELS} caption="Pasa el cursor o arrastra las prendas · Toca cualquiera para girar 360° y ver detalles" />
+                  <ClothingRailHero
+                    key={filterKey}
+                    items={railItems}
+                    hanger="wood"
+                    labels={RAIL_LABELS}
+                    initialActive={Math.floor(railItems.length / 2)}
+                    action={
+                      <Link href="/tienda" className="inline-flex items-center rounded-full bg-brand-primary px-8 py-3 font-ui text-xs font-semibold uppercase tracking-widest text-brand-on-primary transition hover:-translate-y-0.5">
+                        Ver colección
+                      </Link>
+                    }
+                    caption="Pasa el cursor o arrastra las prendas · Toca cualquiera para girar 360° y ver detalles" />
                 ) : (
                   <>
                     <div className="hidden md:block">
